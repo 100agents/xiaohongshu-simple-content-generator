@@ -8,7 +8,7 @@
     "express": "^4.17.1",
     "openai": "^3.2.1",
     "lucide-react": "^0.263.1",
-    "@/components/ui": "^0.1.0"
+    "react-scripts": "5.0.1"
   },
   "scripts": {
     "start": "react-scripts start",
