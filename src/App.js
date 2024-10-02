@@ -1,4 +1,4 @@
-import { AlertCircle, Loader2, Zap } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import React, { useState } from 'react';
 
 const App = () => {
