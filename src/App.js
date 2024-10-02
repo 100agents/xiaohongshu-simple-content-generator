@@ -1,7 +1,5 @@
+import { AlertCircle, Loader2, Zap } from 'lucide-react';
 import React, { useState } from 'react';
-import { AlertCircle, Zap, Loader2 } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 
 const App = () => {
   const [articleContent, setArticleContent] = useState('');
@@ -29,7 +27,7 @@ const App = () => {
         }),
       });
       if (!response.ok) {
-        throw new Error('网络响应不正�?);
+        throw new Error('网络响应不正确');
       }
       const data = await response.json();
       setAnalysisResult(data.analysis);
@@ -56,7 +54,7 @@ const App = () => {
         }),
       });
       if (!response.ok) {
-        throw new Error('网络响应不正�?);
+        throw new Error('网络响应不正确');
       }
       const data = await response.json();
       setGeneratedArticle(data.generatedArticle);
@@ -72,15 +70,14 @@ const App = () => {
       <h1 className="text-2xl font-bold mb-4">小红书爆款文章智能编辑器</h1>
       
       {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>错误</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          <AlertCircle className="inline-block mr-2" />
+          <span>{error}</span>
+        </div>
       )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* 文章分析�?*/}
+        {/* 文章分析区 */}
         <div className="bg-white p-4 rounded shadow">
           <h2 className="text-xl font-semibold mb-2">文章分析</h2>
           <textarea
@@ -100,35 +97,34 @@ const App = () => {
             <option value="fashion">时尚</option>
             <option value="tech">科技</option>
           </select>
-          <Button
-            className="w-full"
+          <button
+            className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
             onClick={handleAnalyze}
             disabled={isAnalyzing}
           >
             {isAnalyzing ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                分析�?..
+                <Loader2 className="inline-block mr-2 animate-spin" />
+                分析中...
               </>
             ) : (
               '分析'
             )}
-          </Button>
+          </button>
           {analysisResult && (
-            <Alert className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>分析结果</AlertTitle>
-              <AlertDescription>{analysisResult}</AlertDescription>
-            </Alert>
+            <div className="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+              <h3 className="font-bold">分析结果</h3>
+              <p>{analysisResult}</p>
+            </div>
           )}
         </div>
 
-        {/* 文案生成�?*/}
+        {/* 文案生成区 */}
         <div className="bg-white p-4 rounded shadow">
           <h2 className="text-xl font-semibold mb-2">文案生成</h2>
           <textarea
             className="w-full h-20 p-2 border rounded mb-2"
-            placeholder="提示�?
+            placeholder="提示词"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
           />
@@ -138,26 +134,25 @@ const App = () => {
             value={originalArticle}
             onChange={(e) => setOriginalArticle(e.target.value)}
           />
-          <Button
-            className="w-full"
+          <button
+            className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600"
             onClick={handleGenerate}
             disabled={isGenerating}
           >
             {isGenerating ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                生成�?..
+                <Loader2 className="inline-block mr-2 animate-spin" />
+                生成中...
               </>
             ) : (
               '生成'
             )}
-          </Button>
+          </button>
           {generatedArticle && (
-            <Alert className="mt-4">
-              <Zap className="h-4 w-4" />
-              <AlertTitle>生成的优化文�?/AlertTitle>
-              <AlertDescription>{generatedArticle}</AlertDescription>
-            </Alert>
+            <div className="mt-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+              <h3 className="font-bold">生成的优化文案</h3>
+              <p>{generatedArticle}</p>
+            </div>
           )}
         </div>
       </div>
