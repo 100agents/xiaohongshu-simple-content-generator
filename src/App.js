@@ -2,7 +2,6 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
-  
   const [articleContent, setArticleContent] = useState('');
   const [articleType, setArticleType] = useState('');
   const [analysisResult, setAnalysisResult] = useState('');
@@ -13,17 +12,7 @@ const App = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
 
-  const eventSourceRef = useRef(null);
-
-  useEffect(() => {
-    return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
-    };
-  }, []);
-
-  const handleSSE = async (url, body, setStateFunction, setLoadingFunction) => {
+  const handleSSE = async (url, body, setStateFunction, setLoadingFunction, additionalAction = null) => {
     setStateFunction('');
     setLoadingFunction(true);
     setError('');
@@ -43,6 +32,7 @@ const App = () => {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let fullContent = '';
 
       while (true) {
         const { value, done } = await reader.read();
@@ -57,8 +47,10 @@ const App = () => {
               setLoadingFunction(false);
             } else if (data.done) {
               setLoadingFunction(false);
+              if (additionalAction) additionalAction(fullContent);
             } else {
-              setStateFunction(prevState => prevState + (data.content || ''));
+              fullContent += data.content || '';
+              setStateFunction(fullContent);
             }
           }
         });
@@ -70,7 +62,17 @@ const App = () => {
   };
 
   const handleAnalyze = () => {
-    handleSSE('/api/analyze', { content: articleContent, type: articleType }, setAnalysisResult, setIsAnalyzing);
+    handleSSE(
+      '/api/analyze',
+      { content: articleContent, type: articleType },
+      setAnalysisResult,
+      setIsAnalyzing,
+      (fullContent) => {
+        // 生成提示词并自动填充到提示词输入框
+        const generatedPrompt = `基于以下分析结果创作一篇吸引人的${articleType}类型的小红书文章：\n\n${fullContent}`;
+        setPrompt(generatedPrompt);
+      }
+    );
   };
 
   const handleGenerate = () => {
@@ -107,10 +109,10 @@ const App = () => {
                 onChange={(e) => setArticleType(e.target.value)}
               >
                 <option value="">选择文章类型</option>
-                <option value="food">美食</option>
-                <option value="travel">旅游</option>
-                <option value="fashion">时尚</option>
-                <option value="tech">科技</option>
+                <option value="美食">美食</option>
+                <option value="旅游">旅游</option>
+                <option value="时尚">时尚</option>
+                <option value="科技">科技</option>
               </select>
               <button
                 className="w-full bg-cyan-500 text-white p-2 rounded hover:bg-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50 transition duration-200"
