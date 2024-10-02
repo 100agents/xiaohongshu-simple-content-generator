@@ -1,5 +1,5 @@
 import { AlertCircle, Loader2 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [articleContent, setArticleContent] = useState('');
@@ -12,57 +12,55 @@ const App = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
 
-  const handleAnalyze = async () => {
-    setIsAnalyzing(true);
-    setError('');
-    try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: articleContent,
-          type: articleType
-        }),
-      });
-      if (!response.ok) {
-        throw new Error('网络响应不正确');
+  const eventSourceRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
       }
-      const data = await response.json();
-      setAnalysisResult(data.analysis);
-      setPrompt(data.prompt);
-    } catch (err) {
-      setError('分析过程中出错：' + err.message);
-    } finally {
-      setIsAnalyzing(false);
+    };
+  }, []);
+
+  const handleSSE = (url, body, setStateFunction, setLoadingFunction) => {
+    setStateFunction('');
+    setLoadingFunction(true);
+    setError('');
+
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
     }
+
+    const eventSource = new EventSource(url + '?' + new URLSearchParams(body));
+    eventSourceRef.current = eventSource;
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.error) {
+        setError(data.error);
+        setLoadingFunction(false);
+        eventSource.close();
+      } else if (data.done) {
+        setLoadingFunction(false);
+        eventSource.close();
+      } else {
+        setStateFunction(prevState => prevState + data.content);
+      }
+    };
+
+    eventSource.onerror = () => {
+      setError('连接错误');
+      setLoadingFunction(false);
+      eventSource.close();
+    };
   };
 
-  const handleGenerate = async () => {
-    setIsGenerating(true);
-    setError('');
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt,
-          originalArticle
-        }),
-      });
-      if (!response.ok) {
-        throw new Error('网络响应不正确');
-      }
-      const data = await response.json();
-      setGeneratedArticle(data.generatedArticle);
-    } catch (err) {
-      setError('生成过程中出错：' + err.message);
-    } finally {
-      setIsGenerating(false);
-    }
+  const handleAnalyze = () => {
+    handleSSE('/api/analyze', { content: articleContent, type: articleType }, setAnalysisResult, setIsAnalyzing);
+  };
+
+  const handleGenerate = () => {
+    handleSSE('/api/generate', { prompt, originalArticle }, setGeneratedArticle, setIsGenerating);
   };
 
   return (
