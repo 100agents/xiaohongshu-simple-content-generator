@@ -12,8 +12,9 @@ const openai = new OpenAIApi(configuration);
 const handleStream = async (res, messages) => {
   try {
     const completion = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o-mini",  // 使用 GPT-4o Mini 模型
       messages: messages,
+      max_tokens: 4096,  // 限制最大输出令牌数为 4096
       stream: true,
     }, { responseType: 'stream' });
 
@@ -57,7 +58,7 @@ app.post('/api/analyze', async (req, res) => {
   });
 
   const messages = [
-    {role: "system", content: "你是一个专业的小红书文案分析师和写手。"},
+    {role: "system", content: "你是一个专业的小红书文案分析师和写手。请分析给定的文章，并提供详细的写作特点和爆款原因分析。然后，基于这个分析，生成一个创作类似爆款文章的提示词。"},
     {role: "user", content: `分析这篇${type}类型的小红书文章，给出写作特点和爆款原因：\n\n${content}`}
   ];
 
@@ -74,7 +75,7 @@ app.post('/api/generate', async (req, res) => {
   });
 
   const messages = [
-    {role: "system", content: "你是一个专业的小红书文案写手。"},
+    {role: "system", content: "你是一个专业的小红书文案写手。请根据给定的提示词和原文，创作一篇优化后的小红书爆款文章。"},
     {role: "user", content: `使用以下提示词优化这篇文章：\n\n提示词：${prompt}\n\n原文：${originalArticle}`}
   ];
 
