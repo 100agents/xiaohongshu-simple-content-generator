@@ -1,7 +1,9 @@
-import { AlertCircle, Loader2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 
+import { Loader2 } from 'lucide-react';
+
 const App = () => {
+  
   const [articleContent, setArticleContent] = useState('');
   const [articleType, setArticleType] = useState('');
   const [analysisResult, setAnalysisResult] = useState('');
@@ -31,7 +33,7 @@ const App = () => {
       eventSourceRef.current.close();
     }
 
-    const eventSource = new EventSource(url + '?' + new URLSearchParams(body));
+    const eventSource = new EventSource(url + '?body=' + encodeURIComponent(JSON.stringify(body)));
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
