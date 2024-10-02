@@ -12,7 +12,7 @@ const openai = new OpenAIApi(configuration);
 const handleStream = async (res, messages) => {
   try {
     const completion = await openai.createChatCompletion({
-      model: "gpt-4-1106-preview",
+      model: "o1-mini",
       messages: messages,
       max_tokens: 400,
       stream: true,
