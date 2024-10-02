@@ -14,7 +14,7 @@ const handleStream = async (res, messages) => {
     const completion = await openai.createChatCompletion({
       model: "gpt-4-1106-preview",
       messages: messages,
-      max_tokens: 4096,
+      max_tokens: 800,
       stream: true,
     }, { responseType: 'stream' });
 
