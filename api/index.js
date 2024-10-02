@@ -10,8 +10,7 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 app.post('/api/analyze', async (req, res) => {
-  const body = JSON.parse(decodeURIComponent(req.query.body));
-  const { content, type } = body;
+  const { content, type } = req.body;
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -45,8 +44,7 @@ app.post('/api/analyze', async (req, res) => {
 });
 
 app.post('/api/generate', async (req, res) => {
-  const body = JSON.parse(decodeURIComponent(req.query.body));
-  const { prompt, originalArticle } = body;
+  const { prompt, originalArticle } = req.body;
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',

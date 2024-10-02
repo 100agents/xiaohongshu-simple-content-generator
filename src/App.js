@@ -1,6 +1,5 @@
+import { AlertCircle, Loader2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
-
-import { Loader2 } from 'lucide-react';
 
 const App = () => {
   
@@ -24,37 +23,50 @@ const App = () => {
     };
   }, []);
 
-  const handleSSE = (url, body, setStateFunction, setLoadingFunction) => {
+  const handleSSE = async (url, body, setStateFunction, setLoadingFunction) => {
     setStateFunction('');
     setLoadingFunction(true);
     setError('');
 
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-    }
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
 
-    const eventSource = new EventSource(url + '?body=' + encodeURIComponent(JSON.stringify(body)));
-    eventSourceRef.current = eventSource;
-
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.error) {
-        setError(data.error);
-        setLoadingFunction(false);
-        eventSource.close();
-      } else if (data.done) {
-        setLoadingFunction(false);
-        eventSource.close();
-      } else {
-        setStateFunction(prevState => prevState + data.content);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
 
-    eventSource.onerror = () => {
-      setError('连接错误');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const decodedChunk = decoder.decode(value, { stream: true });
+        const lines = decodedChunk.split('\n');
+        lines.forEach(line => {
+          if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6));
+            if (data.error) {
+              setError(data.error);
+              setLoadingFunction(false);
+            } else if (data.done) {
+              setLoadingFunction(false);
+            } else {
+              setStateFunction(prevState => prevState + (data.content || ''));
+            }
+          }
+        });
+      }
+    } catch (err) {
+      setError('连接错误: ' + err.message);
       setLoadingFunction(false);
-      eventSource.close();
-    };
+    }
   };
 
   const handleAnalyze = () => {
