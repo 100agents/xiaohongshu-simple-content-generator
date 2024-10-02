@@ -12,37 +12,46 @@ const openai = new OpenAIApi(configuration);
 const handleStream = async (res, messages) => {
   try {
     const completion = await openai.createChatCompletion({
-      model: "gpt-4o-mini",  // 使用 GPT-4o Mini 模型
+      model: "gpt-4-1106-preview",
       messages: messages,
-      max_tokens: 4096,  // 限制最大输出令牌数为 4096
+      max_tokens: 4096,
       stream: true,
     }, { responseType: 'stream' });
 
-    completion.data.on('data', (data) => {
-      const lines = data.toString().split('\n').filter(line => line.trim() !== '');
-      for (const line of lines) {
-        const message = line.replace(/^data: /, '');
-        if (message === '[DONE]') {
+    let buffer = '';
+    completion.data.on('data', (chunk) => {
+      buffer += chunk.toString();
+      let lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      lines.forEach((line) => {
+        if (line.trim() === '') return;
+        if (line.trim() === 'data: [DONE]') {
           res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
           return;
         }
-        try {
-          const parsed = JSON.parse(message);
-          const content = parsed.choices[0].delta.content;
-          if (content) {
-            res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        if (line.startsWith('data: ')) {
+          try {
+            const jsonData = JSON.parse(line.slice(6));
+            if (jsonData.choices && jsonData.choices[0].delta && jsonData.choices[0].delta.content) {
+              res.write(`data: ${JSON.stringify({ content: jsonData.choices[0].delta.content })}\n\n`);
+            }
+          } catch (error) {
+            console.error('Error parsing JSON:', line, error);
           }
-        } catch (error) {
-          console.error('Could not JSON parse stream message', message, error);
         }
-      }
+      });
     });
 
     completion.data.on('end', () => {
+      if (buffer) {
+        console.error('Unprocessed data in buffer:', buffer);
+      }
       res.end();
     });
 
   } catch (error) {
+    console.error('Stream error:', error);
     res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
     res.end();
   }
