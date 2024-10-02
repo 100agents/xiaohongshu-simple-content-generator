@@ -9,6 +9,44 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
+const handleStream = async (res, messages) => {
+  try {
+    const completion = await openai.createChatCompletion({
+      model: "gpt-3.5-turbo",
+      messages: messages,
+      stream: true,
+    }, { responseType: 'stream' });
+
+    completion.data.on('data', (data) => {
+      const lines = data.toString().split('\n').filter(line => line.trim() !== '');
+      for (const line of lines) {
+        const message = line.replace(/^data: /, '');
+        if (message === '[DONE]') {
+          res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+          return;
+        }
+        try {
+          const parsed = JSON.parse(message);
+          const content = parsed.choices[0].delta.content;
+          if (content) {
+            res.write(`data: ${JSON.stringify({ content })}\n\n`);
+          }
+        } catch (error) {
+          console.error('Could not JSON parse stream message', message, error);
+        }
+      }
+    });
+
+    completion.data.on('end', () => {
+      res.end();
+    });
+
+  } catch (error) {
+    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+    res.end();
+  }
+};
+
 app.post('/api/analyze', async (req, res) => {
   const { content, type } = req.body;
 
@@ -18,29 +56,12 @@ app.post('/api/analyze', async (req, res) => {
     'Connection': 'keep-alive'
   });
 
-  try {
-    const stream = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {role: "system", content: "你是一个专业的小红书文案分析师和写手。"},
-        {role: "user", content: `分析这篇${type}类型的小红书文章，给出写作特点和爆款原因：\n\n${content}`}
-      ],
-      stream: true,
-    });
+  const messages = [
+    {role: "system", content: "你是一个专业的小红书文案分析师和写手。"},
+    {role: "user", content: `分析这篇${type}类型的小红书文章，给出写作特点和爆款原因：\n\n${content}`}
+  ];
 
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || '';
-      if (content) {
-        res.write(`data: ${JSON.stringify({ content })}\n\n`);
-      }
-    }
-
-    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-  } catch (error) {
-    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-  } finally {
-    res.end();
-  }
+  await handleStream(res, messages);
 });
 
 app.post('/api/generate', async (req, res) => {
@@ -52,29 +73,12 @@ app.post('/api/generate', async (req, res) => {
     'Connection': 'keep-alive'
   });
 
-  try {
-    const stream = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {role: "system", content: "你是一个专业的小红书文案写手。"},
-        {role: "user", content: `使用以下提示词优化这篇文章：\n\n提示词：${prompt}\n\n原文：${originalArticle}`}
-      ],
-      stream: true,
-    });
+  const messages = [
+    {role: "system", content: "你是一个专业的小红书文案写手。"},
+    {role: "user", content: `使用以下提示词优化这篇文章：\n\n提示词：${prompt}\n\n原文：${originalArticle}`}
+  ];
 
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || '';
-      if (content) {
-        res.write(`data: ${JSON.stringify({ content })}\n\n`);
-      }
-    }
-
-    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-  } catch (error) {
-    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-  } finally {
-    res.end();
-  }
+  await handleStream(res, messages);
 });
 
 module.exports = app;
